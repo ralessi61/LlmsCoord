@@ -29,7 +29,7 @@ def setup_logging(config: dict | None = None):
     console_handler.addFilter(SensitiveDataFilter())
     root_logger.addHandler(console_handler)
 
-    # 2. FILE LOGGING: daily rotate, compression GZIP 
+    # 2. FILE LOGGING: daily rotate, compress, keep 5 files
     file_handler = GZipRotatingFileHandler(os.path.join(LOG_DIR, "app.log"),
         maxBytes=1_000_000,
         backupCount=5,
@@ -43,7 +43,7 @@ def setup_logging(config: dict | None = None):
     file_handler.addFilter(SensitiveDataFilter())
     root_logger.addHandler(file_handler)
 
-    # 3. FILE ERRORI SEPARATO: Solo ERROR/CRITICAL, Rotazione GIORNALIERA (Bonus 1)
+    # 3. ERROR LOGGING: daily rotate, no compression, keep 30 days
     error_handler = logging.handlers.TimedRotatingFileHandler(
         os.path.join(LOG_DIR, "errors.log"),
         when="midnight",
@@ -61,7 +61,7 @@ def setup_logging(config: dict | None = None):
 
 
 class SensitiveDataFilter(logging.Filter):
-    """Remove sensitive information from logs."""
+    """Filter to redact sensitive data from logs."""
 
     PATTERNS: ClassVar[tuple[str, ...]] = (
         r'password["\']?\s*[:=]\s*["\']?[^"\'\s]+',
@@ -103,7 +103,7 @@ class ColorFormatter(logging.Formatter):
 
 
 class GZipRotatingFileHandler(logging.handlers.RotatingFileHandler):
-    """Estende RotatingFileHandler per comprimere il file ruotato in .gz"""
+    """Rotating file handler that compresses old log files with gzip."""
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
