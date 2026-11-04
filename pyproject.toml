@@ -1,0 +1,24 @@
+[project]
+name = "llmsharing"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "ralessi61",email = "ralessi61@gmail.com"}
+]
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic (>=2.14.2,<3.0.0)"
+]
+
+[project.scripts]
+llm-orchestrator = "llmsharing.cli:main"
+
+[tool.poetry]
+packages = [{include = "llmsharing", from = "src"}]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+
