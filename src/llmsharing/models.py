@@ -30,13 +30,13 @@ class LLMRequest(BaseModel):
     request_id: UUID = Field(default_factory=uuid4, description='request Id')
     provider: str = Field(default="fast",   description='LLM provider')
     fields: list[str] | None = Field(default=None, description='Fields to extract if tasktype is extraction')
-    prompt: str | None = Field(default=None, description='LLM Prompt')
+    prompt: str = Field(..., description="LLM Prompt")
 
     @field_validator("prompt")
     @classmethod
     def validate_prompt(cls, v:str) -> str:
         stripped = v.strip() 
-        if stripped or len(stripped) < 3:
+        if len(stripped) < 3:
             raise ValueError("Prompt cannot be empty or less than 3 characters long")
         return stripped
 
