@@ -10,6 +10,7 @@ LOG_DIR = "logs"
 os.makedirs(LOG_DIR, exist_ok=True)
 
 def setup_logging(config: dict | None = None):
+    """Set up logging with console, file, and error handlers."""
     config = config or {}
     log_level = config.get("level", logging.DEBUG)
 

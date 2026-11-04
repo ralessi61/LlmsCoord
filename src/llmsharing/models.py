@@ -25,6 +25,7 @@ class TaskType(Enum):
 
 
 class LLMRequest(BaseModel):
+    """ Request to the LLM for a specific task. """
     doc_id: str = Field(..., description='Parsed doc Id')
     tasktype: TaskType = Field(..., description='LLM task')
     request_id: UUID = Field(default_factory=uuid4, description='request Id')
@@ -48,31 +49,23 @@ class LLMRequest(BaseModel):
 
 
 class LLMResponse(BaseModel):
+    """ Response from the LLM for a given request. """
     response_id: UUID = Field(default_factory=uuid4, description='response Id')
     request_id: UUID = Field(..., description='Unique request Id')
     response: str | None = Field(default=None, description='LLM response')
 
 
 class OrchestratorConfig(BaseModel):
+    """ Configuration for the orchestrator. """
     max_concurrency: int = Field(..., description='Max concurrent requests', ge=1)
     max_tokens: int = Field(..., description='Max tokens per request', gt=0)
     temperature: float = Field(..., description='Temperature for LLM', ge=0.0, le=1.0)
     model_config = ConfigDict(extra='allow')
     orchestrator_id: UUID = Field(default_factory=uuid4, description='Unique orchestrator Id')
-   
-
-class BatchResult(BaseModel):
-    batch_id: UUID = Field(default_factory=uuid4, description='batch Id')
-    total_requests: int = Field(..., description='Total number of requests in the batch', ge=1)
-    successful_requests: int = Field(..., description='Number of successful requests', ge=0)
-    failed_requests: int = Field(..., description='Number of failed requests', ge=0)
-    total_tokens_used: int = Field(..., description='Tokens used in the batch', ge=0)
-    total_latency: float = Field(..., description='Time taken for the batch in seconds', ge=0.0)
-    total_retries: int = Field(..., description='Number of retries in the batch', ge=0)
-    _created_at: datetime = PrivateAttr(default_factory=datetime.now)
 
 
 class TaskResult(BaseModel):
+    """ Result of a single task processed by the orchestrator """
     task_id: UUID = Field(default_factory=uuid4, description='task Id')
     success: bool = Field(..., description='Task success status')
     error_code: int | None = Field(default=None, description='Error code if task failed')
@@ -89,7 +82,7 @@ class TaskResult(BaseModel):
 
     @model_validator(mode="after")
     def validate_result(self) -> Self:
-        """ Validate that the result is coherent """
+        """ Validate result is coherent """
         if not self.success and not self.error_message:
             raise ValueError("Task failed, the error message is required")
         if self.success and not self.output:
@@ -97,3 +90,18 @@ class TaskResult(BaseModel):
         if self.success and not self.tokens_estimated:
             raise ValueError("Task succeeded, the estimated tokens are required")
         return self
+   
+
+class BatchResult(BaseModel):
+    """ Result of a batch of tasks processed by the orchestrator. """
+    batch_id: UUID = Field(default_factory=uuid4, description='batch Id')
+    total_requests: int = Field(..., description='Total number of requests in the batch', ge=1)
+    successful_requests: int = Field(..., description='Number of successful requests', ge=0)
+    failed_requests: int = Field(..., description='Number of failed requests', ge=0)
+    total_tokens_used: int = Field(..., description='Tokens used in the batch', ge=0)
+    total_latency: float = Field(..., description='Time taken for the batch in seconds', ge=0.0)
+    total_retries: int = Field(..., description='Number of retries in the batch', ge=0)
+    results: list[TaskResult] = Field(..., description="One result per request, same order")    
+    _created_at: datetime = PrivateAttr(default_factory=datetime.now)
+
+

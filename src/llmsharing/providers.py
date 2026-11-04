@@ -1,8 +1,8 @@
+import asyncio
 import random
-from datetime import time
 from typing import ClassVar
 
-from llmsharing.exceptions import RateLimitError
+from llmsharing.exceptions import ProviderTimeoutError, RateLimitError
 from llmsharing.models import LLMRequest
 
 
@@ -22,8 +22,8 @@ class ProviderMeta(type):
 class BaseProvider(metaclass=ProviderMeta):
     """Base class for all providers."""
     providername : str = ""
-    def generate_text(self, request: LLMRequest) -> str:
-        """Common interface for all providers."""
+    async def generate_text(self, request: LLMRequest) -> str:
+        """Common interface for all providers; gives back a coroutine, who use it must use await"""
         raise NotImplementedError("Subclasses must implement generate_text")
     
 
@@ -31,21 +31,27 @@ class FastProvider(BaseProvider):
     """provider fast and reliable"""
     provider_name = "fast"
 
-    def generate_text(self, request: LLMRequest) -> str:
+    async def generate_text(self, request: LLMRequest) -> str:
         """small latency"""
-        time.sleep(random.uniform(0.01, 0.03))
-        return f"[fast:{request.task_type.value}] Processed doc {request.doc_id}"    
+        await asyncio.sleep(random.uniform(0.01, 0.03))
+        return f"[fast:{request.tasktype.value}] Processed doc {request.doc_id}"    
 
 
 class SlowProvider(BaseProvider):
     """provider slow and reliable"""
     provider_name = "slow"
 
-    def generate_text(self, request: LLMRequest) -> str:
-        """large latency"""
+    async def generate_text(self, request: LLMRequest) -> str:
+        """large latency, every 20% of calls raises a ProviderTimeoutError"""
         latency = random.uniform(0.05, 0.2)
-        time.sleep(latency)
-        return f"[slow:{request.task_type.value}] Processed doc {request.doc_id}"   
+        await asyncio.sleep(latency)
+        if random.random() < 0.2:
+            # transsient, it will be retried from the orchestrator
+            raise ProviderTimeoutError(
+                f"Timeout for doc {request.doc_id}",
+                timeout=latency,
+            )        
+        return f"[slow:{request.tasktype.value}] Processed doc {request.doc_id}"   
 
 
 class ReteLimitedProvider(BaseProvider):
@@ -56,11 +62,11 @@ class ReteLimitedProvider(BaseProvider):
     def __init__(self, max_calls_before_limit: int = 2) -> None:
         self.max_calls_before_limit = max_calls_before_limit    
 
-    def generate_text(self, request: LLMRequest) -> str:
+    async def generate_text(self, request: LLMRequest) -> str:
         """every 3 calls raises a RateLimitError"""
         ReteLimitedProvider.call_count += 1
-        time.sleep(random.uniform(0.01, 0.03))
+        await asyncio.sleep(random.uniform(0.01, 0.03)) 
         if ReteLimitedProvider.call_count % (self.max_calls_before_limit + 1) == 0:
             # every 3d call rate limit 429, next retry passes
             raise RateLimitError(f"Rate limit exceeded for doc {request.doc_id}", retry_after=1)
-        return f"[ratelimit:{request.task_type.value}] Processed doc {request.doc_id}"
+        return f"[ratelimit:{request.tasktype.value}] Processed doc {request.doc_id}"
