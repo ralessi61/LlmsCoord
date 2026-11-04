@@ -91,9 +91,9 @@ class TaskResult(BaseModel):
     def validate_result(self) -> Self:
         """ Validate that the result is coherent """
         if not self.success and not self.error_message:
-            raise ValueError("If the task failed, the error message is required")
+            raise ValueError("Task failed, the error message is required")
         if self.success and not self.output:
-            raise ValueError("If the task succeeded, the output is required")
+            raise ValueError("Task succeeded, the output is required")
         if self.success and not self.tokens_estimated:
-            raise ValueError("If the task succeeded, the estimated tokens are required")
+            raise ValueError("Task succeeded, the estimated tokens are required")
         return self
