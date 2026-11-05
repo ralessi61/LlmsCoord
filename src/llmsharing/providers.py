@@ -21,7 +21,7 @@ class ProviderMeta(type):
 
 class BaseProvider(metaclass=ProviderMeta):
     """Base class for all providers."""
-    providername : str = ""
+    provider_name : str = ""
     async def generate_text(self, request: LLMRequest) -> str:
         """Common interface for all providers; gives back a coroutine, who use it must use await"""
         raise NotImplementedError("Subclasses must implement generate_text")
@@ -54,8 +54,8 @@ class SlowProvider(BaseProvider):
         return f"[slow:{request.tasktype.value}] Processed doc {request.doc_id}"   
 
 
-class ReteLimitedProvider(BaseProvider):
-    """provider slow and reliable"""
+class RateLimitedProvider(BaseProvider):
+    """Rate limited"""
     provider_name = "ratelimit"
     # call_count here to avoid reinitialization on each call, shared by all instances
     call_count: int = 0
@@ -64,9 +64,9 @@ class ReteLimitedProvider(BaseProvider):
 
     async def generate_text(self, request: LLMRequest) -> str:
         """every 3 calls raises a RateLimitError"""
-        ReteLimitedProvider.call_count += 1
+        RateLimitedProvider.call_count += 1
         await asyncio.sleep(random.uniform(0.01, 0.03)) 
-        if ReteLimitedProvider.call_count % (self.max_calls_before_limit + 1) == 0:
+        if RateLimitedProvider.call_count % (self.max_calls_before_limit + 1) == 0:
             # every 3d call rate limit 429, next retry passes
             raise RateLimitError(f"Rate limit exceeded for doc {request.doc_id}", retry_after=1)
         return f"[ratelimit:{request.tasktype.value}] Processed doc {request.doc_id}"
