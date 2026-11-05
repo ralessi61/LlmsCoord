@@ -36,6 +36,7 @@ class LLMRequest(BaseModel):
     @field_validator("prompt")
     @classmethod
     def validate_prompt(cls, v:str) -> str:
+        """Trim the prompt and reject empty values that are too short."""
         stripped = v.strip() 
         if len(stripped) < 3:
             raise ValueError("Prompt cannot be empty or less than 3 characters long")

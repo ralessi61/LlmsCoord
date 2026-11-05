@@ -9,6 +9,7 @@ from llmsharing.exceptions import TransientError
 _retries = contextvars.ContextVar("retries", default=0)
 
 def get_retry_count() -> int:
+    """Return the retry count recorded for the current execution context."""
     return _retries.get()
 
 logger = logging.getLogger(__name__)
@@ -26,6 +27,7 @@ def retry(max_attempts: int = 3, base_delay: float = 0.1, factor: float = 2.0):
     def decorator(func):
         @functools.wraps(func)
         async def wrapper(*args, **kwargs):
+            """Execute the wrapped function and retry transient failures."""
             for attempt in range(1, max_attempts + 1):
                 try:
                     result = await func(*args, **kwargs)
@@ -41,12 +43,10 @@ def retry(max_attempts: int = 3, base_delay: float = 0.1, factor: float = 2.0):
 
 
 def measure_execution_time(func):
-    """
-    time of one await. Must await, otherwise you time ~0s and the call never runs.
-    Duration not logged if func raises (timer sits after the await).
-    """
+    """Measure how long the wrapped coroutine takes to finish."""
     @functools.wraps(func)
     async def wrapper(*args, **kwargs):
+        """Run the underlying call and log the elapsed time."""
         start = time.perf_counter()
         result = await func(*args, **kwargs)
         end = time.perf_counter()
@@ -56,12 +56,10 @@ def measure_execution_time(func):
 
 
 def call_counter(func):
-    """
-    numcalls lives on the wrapper, so concurrent tasks share one counter.
-    OK as a total, not as retries of single request.
-    """
+    """Keep a simple total count for how many times the wrapped function is called."""
     @functools.wraps(func)
     async def wrapper(*args, **kwargs):
+        """Increment the counter before delegating to the original function."""
         wrapper.numcalls += 1
         logger.debug(f"Func called {wrapper.numcalls} times")
         return await func(*args, **kwargs)

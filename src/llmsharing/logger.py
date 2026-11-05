@@ -10,7 +10,7 @@ LOG_DIR = "logs"
 os.makedirs(LOG_DIR, exist_ok=True)
 
 def setup_logging(config: dict | None = None):
-    """Set up logging with console, file, and error handlers."""
+    """Configure the root logger for console output and rotating files."""
     config = config or {}
     log_level = config.get("level", logging.DEBUG)
 
@@ -49,7 +49,7 @@ def setup_logging(config: dict | None = None):
         os.path.join(LOG_DIR, "errors.log"),
         when="midnight",
         interval=1,
-        backupCount=30, # 30 giorni
+        backupCount=30, # 30 days
         encoding="utf-8"
     )
     error_handler.setLevel(logging.ERROR)
@@ -109,6 +109,7 @@ class GZipRotatingFileHandler(logging.handlers.RotatingFileHandler):
         super().__init__(*args, **kwargs)
 
     def doRollover(self):
+        """Rotate the file and compress the previous log into a gzip archive."""
         # std rot
         super().doRollover()
         # zip the old log file

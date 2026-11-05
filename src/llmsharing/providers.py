@@ -11,6 +11,7 @@ class ProviderMeta(type):
     registry: ClassVar[dict[str, type]] = {}
 
     def __new__(mcs, name, bases, attrs):
+        """Register a concrete provider automatically when it declares a name."""
         cls = super().__new__(mcs, name, bases, attrs)
         # Register the class only if not the base class and has a provider_name
         provider_name = attrs.get("provider_name")
