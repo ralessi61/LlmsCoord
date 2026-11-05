@@ -1,5 +1,6 @@
 import unittest
-from unittest.mock import AsyncMock, call as expected_call, patch
+from unittest.mock import AsyncMock, patch
+from unittest.mock import call as expected_call
 
 from llmsharing.decorators import retry
 from llmsharing.exceptions import AuthError, ProviderTimeoutError, RateLimitError
@@ -16,6 +17,8 @@ class TestRetry(unittest.IsolatedAsyncioTestCase):
         @retry(max_attempts=3)
         async def generate():
             return await call()
+        # For the duration of that block, asyncio.sleep inside decorators.py does not really wait. 
+        # A stand-in takes its place, records the arguments, and returns immediately.
         with patch("llmsharing.decorators.asyncio.sleep", new_callable=AsyncMock) as sleep:
             self.assertEqual(await generate(), "ok")
         self.assertEqual(call.call_count, 2)
@@ -28,9 +31,11 @@ class TestRetry(unittest.IsolatedAsyncioTestCase):
         @retry(max_attempts=3)
         async def generate():
             return await call()
-        with patch("llmsharing.decorators.asyncio.sleep", new_callable=AsyncMock) as sleep:
-            with self.assertRaises(AuthError):
-                await generate()
+        with (
+            patch("llmsharing.decorators.asyncio.sleep", new_callable=AsyncMock) as sleep,
+            self.assertRaises(AuthError),
+        ):
+            await generate()
         self.assertEqual(call.call_count, 1)
         self.assertEqual(sleep.await_count, 0)
 
@@ -43,8 +48,10 @@ class TestRetry(unittest.IsolatedAsyncioTestCase):
         async def generate():
             return await call()
 
-        with patch("llmsharing.decorators.asyncio.sleep", new_callable=AsyncMock) as sleep:
-            with self.assertRaises(ProviderTimeoutError):
-                await generate()
+        with (
+            patch("llmsharing.decorators.asyncio.sleep", new_callable=AsyncMock) as sleep,
+            self.assertRaises(ProviderTimeoutError),
+        ):
+            await generate()
         self.assertEqual(call.call_count, 3)
         self.assertEqual(sleep.await_args_list, [expected_call(0.1), expected_call(0.2)])
